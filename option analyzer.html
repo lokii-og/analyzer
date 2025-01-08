@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Option Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: orange;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            color: black;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #800020;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: skyblue;
+            color: black;
+            border: none;
+        }
+
+        /* Lighter Green and Red */
+        input[placeholder*="CE Previous Close"] {
+            background-color: #55cc55;  /* Light Green */
+            color: white;
+        }
+
+        input[placeholder*="PE Previous Close"] {
+            background-color: #ff6f6f;  /* Light Red */
+            color: white;
+        }
+
+        /* White Placeholder color */
+        input::placeholder {
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Option Analyzer</h1>
+
+        <!-- Input Fields -->
+        <div class="input-group">
+            <label for="cvi">Current NIFTY 50 Value</label>
+            <input type="number" id="cvi" placeholder="Enter Current NIFTY 50 Value">
+        </div>
+
+        <div class="input-group">
+            <label for="atmStrikeInput">Select ATM Strike</label>
+            <select id="atmStrikeInput">
+                <option value="">Select ATM Strike</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="ceStrikeItm2">CE Strike (ITM-2)</label>
+            <input type="number" id="ceStrikeItm2" placeholder="CE Strike (ITM-2)">
+            <input type="number" id="ceCloseItm2" placeholder="CE Previous Close (ITM-2)">
+            <input type="number" id="peCloseItm2" placeholder="PE Previous Close (ITM-2)">
+        </div>
+
+        <div class="input-group">
+            <label for="ceStrikeItm">CE Strike (ITM)</label>
+            <input type="number" id="ceStrikeItm" placeholder="CE Strike (ITM)">
+            <input type="number" id="ceCloseItm" placeholder="CE Previous Close (ITM)">
+            <input type="number" id="peCloseItm" placeholder="PE Previous Close (ITM)">
+        </div>
+
+        <div class="input-group">
+            <label for="atmStrike">At-the-Money</label>
+            <input type="number" id="atmStrike" placeholder="ATM Strike">
+            <input type="number" id="ceCloseAtm" placeholder="CE Previous Close (ATM)">
+            <input type="number" id="peCloseAtm" placeholder="PE Previous Close (ATM)">
+        </div>
+
+        <div class="input-group">
+            <label for="peStrikeItm">PE Strike (ITM)</label>
+            <input type="number" id="peStrikeItm" placeholder="PE Strike (ITM)">
+            <input type="number" id="ceClosePeItm" placeholder="CE Previous Close (PE ITM)">
+            <input type="number" id="peClosePeItm" placeholder="PE Previous Close (PE ITM)">
+        </div>
+
+        <div class="input-group">
+            <label for="peStrikeItm2">PE Strike (ITM-2)</label>
+            <input type="number" id="peStrikeItm2" placeholder="PE Strike (ITM-2)">
+            <input type="number" id="ceClosePeItm2" placeholder="CE Previous Close (PE ITM-2)">
+            <input type="number" id="peClosePeItm2" placeholder="PE Previous Close (PE ITM-2)">
+        </div>
+
+        <button onclick="calculateResults()">Click to Get Levels</button>
+
+        <!-- Results Table -->
+        <div class="results hidden" id="results">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Strike Type</th>
+                        <th>Strike</th>
+                        <th>BEP</th>
+                        <th>Crossover</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CE Strike (ITM)</td>
+                        <td id="ceStrikeItmDisplay"></td>
+                        <td id="ceBep"></td>
+                        <td id="ceCrossover"></td>
+                    </tr>
+                    <tr>
+                        <td>At-the-Money</td>
+                        <td id="atmStrikeDisplay"></td>
+                        <td id="atmBep"></td>
+                        <td id="atmCrossover"></td>
+                    </tr>
+                    <tr>
+                        <td>PE Strike (ITM)</td>
+                        <td id="peStrikeItmDisplay"></td>
+                        <td id="peBep"></td>
+                        <td id="peCrossover"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function updateATMRange() {
+            const cvi = parseFloat(document.getElementById("cvi").value);
+            const atmStrikeInput = document.getElementById("atmStrikeInput");
+            if (isNaN(cvi)) return;
+
+            atmStrikeInput.innerHTML = "<option value=''>Select ATM Strike</option>";
+
+            for (let i = cvi - 500; i <= cvi + 500; i += 50) {
+                const option = document.createElement("option");
+                option.value = i;
+                option.textContent = i;
+                atmStrikeInput.appendChild(option);
+            }
+        }
+
+        function fillStrikePrices() {
+            const atmStrike = parseFloat(document.getElementById("atmStrikeInput").value);
+
+            if (isNaN(atmStrike)) return;
+
+            document.getElementById("ceStrikeItm2").value = atmStrike - 200;
+            document.getElementById("ceStrikeItm").value = atmStrike - 100;
+            document.getElementById("atmStrike").value = atmStrike;
+            document.getElementById("peStrikeItm").value = atmStrike + 100;
+            document.getElementById("peStrikeItm2").value = atmStrike + 200;
+        }
+
+        function calculateResults() {
+            const cvi = parseFloat(document.getElementById("cvi").value) || 0;
+            const atmStrike = parseFloat(document.getElementById("atmStrikeInput").value) || 0;
+            const ceStrikeItm2 = parseFloat(document.getElementById("ceStrikeItm2").value) || 0;
+            const ceCloseItm2 = parseFloat(document.getElementById("ceCloseItm2").value) || 0;
+            const peCloseItm2 = parseFloat(document.getElementById("peCloseItm2").value) || 0;
+
+            const ceStrikeItm = parseFloat(document.getElementById("ceStrikeItm").value) || 0;
+            const ceCloseItm = parseFloat(document.getElementById("ceCloseItm").value) || 0;
+            const peCloseItm = parseFloat(document.getElementById("peCloseItm").value) || 0;
+
+            const ceCloseAtm = parseFloat(document.getElementById("ceCloseAtm").value) || 0;
+            const peCloseAtm = parseFloat(document.getElementById("peCloseAtm").value) || 0;
+
+            const peStrikeItm = parseFloat(document.getElementById("peStrikeItm").value) || 0;
+            const ceClosePeItm = parseFloat(document.getElementById("ceClosePeItm").value) || 0;
+            const peClosePeItm = parseFloat(document.getElementById("peClosePeItm").value) || 0;
+
+            const ceClosePeItm2 = parseFloat(document.getElementById("ceClosePeItm2").value) || 0;
+            const peClosePeItm2 = parseFloat(document.getElementById("peClosePeItm2").value) || 0;
+
+            const ceBep = ((ceCloseItm + peCloseItm) / 2).toFixed(2);
+            const atmBep = ((ceCloseAtm + peCloseAtm) / 2).toFixed(2);
+            const peBep = ((ceClosePeItm + peClosePeItm) / 2).toFixed(2);
+
+            const ceItmCrossover = Math.round((peCloseItm2 + peCloseAtm) / 2);
+            const atmCrossover = Math.round((peCloseItm + ceClosePeItm) / 2);
+            const peItmCrossover = Math.round((peCloseAtm + ceClosePeItm2) / 2);
+
+            document.getElementById("ceStrikeItmDisplay").textContent = ceStrikeItm;
+            document.getElementById("ceBep").textContent = ceBep;
+            document.getElementById("ceCrossover").textContent = ceItmCrossover;
+
+            document.getElementById("atmStrikeDisplay").textContent = atmStrike;
+            document.getElementById("atmBep").textContent = atmBep;
+            document.getElementById("atmCrossover").textContent = atmCrossover;
+
+            document.getElementById("peStrikeItmDisplay").textContent = peStrikeItm;
+            document.getElementById("peBep").textContent = peBep;
+            document.getElementById("peCrossover").textContent = peItmCrossover;
+
+            document.getElementById("results").classList.remove("hidden");
+        }
+
+        document.getElementById("cvi").addEventListener("input", updateATMRange);
+        document.getElementById("atmStrikeInput").addEventListener("change", fillStrikePrices);
+
+        // Move to next input field on Enter key press
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let nextInput = input.nextElementSibling;
+                    while (nextInput && nextInput.tagName !== 'INPUT') {
+                        nextInput = nextInput.nextElementSibling;
+                    }
+                    if (nextInput) nextInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+
